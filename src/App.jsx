@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useReducer } from "react";
 import { diffChars } from "diff";
 import { v4 as uuidV4 } from "uuid";
 import "./App.css";
@@ -15,6 +15,63 @@ const DEFAULT_STATE = {
   contentTwo: "",
 };
 
+const initialState = {
+  contents: DEFAULT_STATE,
+  diffResult: [],
+  summaryResult: {},
+  sessions: {},
+  activeSession: "",
+  isSummarizing: false,
+};
+
+const reducer = (state, action) => {
+  switch (action.type) {
+    case "SET_CONTENT":
+      return {
+        ...state,
+        contents: {
+          ...state.contents,
+          [action.payload.name]: action.payload.value,
+        },
+      };
+    case "SET_DIFF_RESULT":
+      return {
+        ...state,
+        diffResult: action.payload,
+      };
+    case "SET_SUMMARY_RESULT":
+      return {
+        ...state,
+        summaryResult: action.payload,
+      };
+    case "SET_SESSIONS":
+      return {
+        ...state,
+        sessions: action.payload,
+      };
+    case "SET_ACTIVE_SESSION":
+      return {
+        ...state,
+        activeSession: action.payload,
+      };
+    case "SET_IS_SUMMARIZING":
+      return {
+        ...state,
+        isSummarizing: action.payload,
+      };
+    case "RESET":
+      return {
+        ...state,
+        contents: DEFAULT_STATE,
+        diffResult: [],
+        activeSession: "",
+        summaryResult: {},
+      };
+    default:
+      return state;
+  }
+};
+
 const formatDate = (dateString) => {
   const options = {
     year: "numeric",
@@ -28,13 +85,9 @@ const formatDate = (dateString) => {
 };
 
 const App = () => {
-  const [contents, setContents] = useState(DEFAULT_STATE);
+  const [state, dispatch] = useReducer(reducer, initialState);
+  const { contents, diffResult, summaryResult, sessions, activeSession, isSummarizing } = state;
   const { contentOne, contentTwo } = contents;
-  const [diffResult, setDiffResult] = useState([]);
-  const [summaryResult, setSummaryResult] = useState({});
-  const [sessions, setSessions] = useState({});
-  const [activeSession, setActiveSession] = useState("");
-  const [isSummarizing, setIsSummarizing] = useState(false);
 
   const { isOpen: isDeleteConfirmOpen, handleToggle: toggleDeleteConfirm } = useToggleState();
   const { isOpen: includeSummary, handleToggle: toggleIncludeSummary } = useToggleState();
@@ -44,15 +97,12 @@ const App = () => {
   const handleContentChange = (event, name) => {
     const length = includeSummary ? MAX_LENGTH_WITH_SUMMARY : MAX_LENGTH;
     if (event.target.value.length > length) return;
-    setContents({
-      ...contents,
-      [name]: event.target.value,
-    });
+    dispatch({ type: "SET_CONTENT", payload: { name, value: event.target.value } });
   };
 
   useEffect(() => {
     const saved = localStorage.getItem(SESSION_KEY);
-    setSessions(JSON.parse(saved) || []);
+    dispatch({ type: "SET_SESSIONS", payload: JSON.parse(saved) || [] });
   }, []);
 
   const loadSession = (id) => {
@@ -60,13 +110,11 @@ const App = () => {
     if (!session) return;
     const { contentOne, contentTwo, diffResult, summaryResult } = session;
 
-    setContents({
-      contentOne,
-      contentTwo,
-    });
-    setDiffResult(diffResult);
-    setActiveSession(id);
-    setSummaryResult(summaryResult);
+    dispatch({ type: "SET_CONTENT", payload: { name: "contentOne", value: contentOne } });
+    dispatch({ type: "SET_CONTENT", payload: { name: "contentTwo", value: contentTwo } });
+    dispatch({ type: "SET_DIFF_RESULT", payload: diffResult });
+    dispatch({ type: "SET_ACTIVE_SESSION", payload: id });
+    dispatch({ type: "SET_SUMMARY_RESULT", payload: summaryResult });
   };
 
   const saveSession = (session, id = null) => {
@@ -79,17 +127,17 @@ const App = () => {
         createdAt: new Date().toISOString(),
       },
     };
-    setSessions(newSessions);
+    dispatch({ type: "SET_SESSIONS", payload: newSessions });
     localStorage.setItem(SESSION_KEY, JSON.stringify(newSessions));
   };
 
   const handleDeleteSession = (id) => {
     const newSessions = { ...sessions };
     delete newSessions[id];
-    setSessions(newSessions);
+    dispatch({ type: "SET_SESSIONS", payload: newSessions });
     localStorage.setItem(SESSION_KEY, JSON.stringify(newSessions));
     if (id === activeSession) {
-      setActiveSession("");
+      dispatch({ type: "SET_ACTIVE_SESSION", payload: "" });
     }
     toggleDeleteConfirm();
   };
@@ -102,7 +150,7 @@ const App = () => {
   const handleCompareAndSummarize = () => {
     const result = compareTexts();
     if (!result) return;
-    setDiffResult(result);
+    dispatch({ type: "SET_DIFF_RESULT", payload: result });
     saveSession({
       contentOne,
       contentTwo,
@@ -114,7 +162,7 @@ const App = () => {
   };
 
   const summarizeDiff = async () => {
-    setIsSummarizing(true);
+    dispatch({ type: "SET_IS_SUMMARIZING", payload: true });
     try {
       const response = await fetch("/.netlify/functions/summarizeDiff", {
         method: "POST",
@@ -123,13 +171,13 @@ const App = () => {
       });
 
       if (!response.ok) {
-        setIsSummarizing(false);
+        dispatch({ type: "SET_IS_SUMMARIZING", payload: false });
         throw new Error(`Server error: ${response.status}`);
       }
 
       const result = await response.json();
-      setSummaryResult(result);
-      setIsSummarizing(false);
+      dispatch({ type: "SET_SUMMARY_RESULT", payload: result });
+      dispatch({ type: "SET_IS_SUMMARIZING", payload: false });
       saveSession(
         {
           contentOne,
@@ -141,15 +189,12 @@ const App = () => {
       );
     } catch (error) {
       console.error("Error summarizing diff:", error);
-      setIsSummarizing(false);
+      dispatch({ type: "SET_IS_SUMMARIZING", payload: false });
     }
   };
 
   const handleReset = () => {
-    setContents(DEFAULT_STATE);
-    setDiffResult([]);
-    setActiveSession("");
-    setSummaryResult({});
+    dispatch({ type: "RESET" });
   };
 
   return (
@@ -251,7 +296,7 @@ const App = () => {
             </p>
           </article>
         </section>
-        <div className="flex justify-between relative">
+        <div className="flex justify-between relative pb-5">
           <div className="flex flex-col md:flex-row">
             <button
               className="px-4 py-1 my-4 rounded-xl cursor-pointer text-sky-50 bg-sky-500 hover:bg-sky-700 sm:text-xs"
