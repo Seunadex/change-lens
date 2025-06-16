@@ -12,6 +12,8 @@
   "dependencies": {
     "@tailwindcss/vite": "^4.1.8",
     "diff": "^8.0.2",
+    "dotenv": "^16.5.0",
+    "node-fetch": "^3.3.2",
     "openai": "^5.0.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

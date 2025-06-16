@@ -15,18 +15,31 @@ const DEFAULT_STATE = {
   contentTwo: "",
 };
 
+const formatDate = (dateString) => {
+  const options = {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  };
+  return new Date(dateString).toLocaleString(undefined, options);
+};
+
 const App = () => {
   const [contents, setContents] = useState(DEFAULT_STATE);
   const { contentOne, contentTwo } = contents;
   const [diffResult, setDiffResult] = useState([]);
+  const [summaryResult, setSummaryResult] = useState({});
   const [sessions, setSessions] = useState({});
   const [activeSession, setActiveSession] = useState("");
+  const [isSummarizing, setIsSummarizing] = useState(false);
 
-  const { isOpen, handleToggle } = useToggleState();
-  const { isOpen: includeSummary, handleToggle: setIncludeSummary } =
-    useToggleState();
-  const { isOpen: isInline, handleToggle: setIsInline } = useToggleState();
-  const { isOpen: showInfo, handleToggle: handleShowInfo } = useToggleState();
+  const { isOpen: isDeleteConfirmOpen, handleToggle: toggleDeleteConfirm } = useToggleState();
+  const { isOpen: includeSummary, handleToggle: toggleIncludeSummary } = useToggleState();
+  const { isOpen: isInline, handleToggle: toggleInlineView } = useToggleState();
+  const { isOpen: showInfo, handleToggle: toggleShowInfo } = useToggleState();
 
   const handleContentChange = (event, name) => {
     const length = includeSummary ? MAX_LENGTH_WITH_SUMMARY : MAX_LENGTH;
@@ -45,7 +58,7 @@ const App = () => {
   const loadSession = (id) => {
     const session = sessions[id];
     if (!session) return;
-    const { contentOne, contentTwo, diffResult } = session;
+    const { contentOne, contentTwo, diffResult, summaryResult } = session;
 
     setContents({
       contentOne,
@@ -53,6 +66,7 @@ const App = () => {
     });
     setDiffResult(diffResult);
     setActiveSession(id);
+    setSummaryResult(summaryResult);
   };
 
   const saveSession = (session, id = null) => {
@@ -77,12 +91,17 @@ const App = () => {
     if (id === activeSession) {
       setActiveSession("");
     }
-    handleToggle();
+    toggleDeleteConfirm();
+  };
+
+  const compareTexts = () => {
+    if (!contentOne.length && !contentTwo.length) return null;
+    return diffChars(contentOne, contentTwo);
   };
 
   const handleCompareAndSummarize = () => {
-    if (!contentOne.length && !contentTwo.length) return;
-    const result = diffChars(contentOne, contentTwo);
+    const result = compareTexts();
+    if (!result) return;
     setDiffResult(result);
     saveSession({
       contentOne,
@@ -90,7 +109,39 @@ const App = () => {
       diffResult: result,
     });
     if (includeSummary) {
-      // summarizeDiff();
+      summarizeDiff();
+    }
+  };
+
+  const summarizeDiff = async () => {
+    setIsSummarizing(true);
+    try {
+      const response = await fetch("/.netlify/functions/summarizeDiff", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contentOne, contentTwo }),
+      });
+
+      if (!response.ok) {
+        setIsSummarizing(false);
+        throw new Error(`Server error: ${response.status}`);
+      }
+
+      const result = await response.json();
+      setSummaryResult(result);
+      setIsSummarizing(false);
+      saveSession(
+        {
+          contentOne,
+          contentTwo,
+          diffResult,
+          summaryResult: result,
+        },
+        activeSession
+      );
+    } catch (error) {
+      console.error("Error summarizing diff:", error);
+      setIsSummarizing(false);
     }
   };
 
@@ -98,19 +149,20 @@ const App = () => {
     setContents(DEFAULT_STATE);
     setDiffResult([]);
     setActiveSession("");
+    setSummaryResult({});
   };
 
   return (
     <div className="mb-20">
       <SessionDeleteConfirmation
-        isOpen={isOpen}
-        handleToggle={handleToggle}
+        isOpen={isDeleteConfirmOpen}
+        handleToggle={toggleDeleteConfirm}
         handleDelete={() => handleDeleteSession(activeSession)}
       />
       <header className="text-center p-10 bg-gray-100 border-b border-gray-300">
-        <h1 className="text-4xl font-bold text-gray-800 mb-2">Summarize It</h1>
-        <h3 className="text-lg text-gray-600">
-          AI-powered text comparison with human-friendly summaries.
+        <h1 className="text-4xl font-bold text-gray-800 mb-2">ChangeLens</h1>
+        <h3 className="text-lg text-gray-600 italic">
+          Smart text comparison with clear summaries and change significance -- powered by AI.
         </h3>
         {!!Object.keys(sessions).length && (
           <div className="flex justify-center">
@@ -120,10 +172,10 @@ const App = () => {
               value={activeSession}
               className="m-3 appearance-auto bg-gray-50 p-2 px-3 rounded-2xl text-sm"
             >
-              <option value="">-- Select a session --</option>
+              <option value="" className="text-gray-600">-- Select a session --</option>
               {Object.values(sessions).map((s) => (
                 <option key={s.id} value={s.id} className="">
-                  {new Date(s.createdAt).toLocaleString()}
+                  {formatDate(s.createdAt)}
                 </option>
               ))}
             </select>
@@ -131,7 +183,7 @@ const App = () => {
               <button
                 type="button"
                 className="p-2 my-2 rounded-xl cursor-pointer bg-red-50 text-red-500 hover:bg-sky-100"
-                onClick={handleToggle}
+                onClick={toggleDeleteConfirm}
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -169,7 +221,7 @@ const App = () => {
               value={contentOne}
               onChange={(event) => handleContentChange(event, "contentOne")}
               placeholder="Enter previous content here..."
-              className="w-full p-3 text-sm text-gray-900 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
+              className="w-full p-4 text-sm text-gray-800 bg-white border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-colors resize-none placeholder:text-gray-400"
             />
             <p className="text-sm place-self-end text-gray-500">
               {contentOne.length}/
@@ -191,7 +243,7 @@ const App = () => {
               value={contentTwo}
               onChange={(event) => handleContentChange(event, "contentTwo")}
               placeholder="Enter current content here..."
-              className="w-full p-3 text-sm text-gray-900 bg-gray-50 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
+              className="w-full p-4 text-sm text-gray-800 bg-white border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-colors resize-none placeholder:text-gray-400"
             />
             <p className="text-sm place-self-end text-gray-500">
               {contentTwo.length}/
@@ -209,17 +261,17 @@ const App = () => {
             </button>
             <label
               className="inline-flex items-center cursor-pointer px-2"
-              onMouseEnter={() => handleShowInfo(false)}
-              onMouseLeave={() => handleShowInfo(true)}
-              onTouchStart={() => handleShowInfo(false)}
-              onTouchEnd={() => handleShowInfo(true)}
+              onMouseEnter={() => toggleShowInfo(false)}
+              onMouseLeave={() => toggleShowInfo(true)}
+              onTouchStart={() => toggleShowInfo(false)}
+              onTouchEnd={() => toggleShowInfo(true)}
             >
               <input
                 type="checkbox"
                 value=""
                 className="sr-only peer"
                 checked={includeSummary}
-                onChange={(e) => setIncludeSummary(e.target.checked)}
+                onChange={(e) => toggleIncludeSummary(e.target.checked)}
               />
               <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-500"></div>
               <span className="ms-3 text-sm font-medium text-gray-600">
@@ -239,15 +291,42 @@ const App = () => {
             Reset
           </button>
         </div>
+        {isSummarizing ? (
+          <div className="animate-pulse text-center my-4 text-gray-500">
+            Summarizing changes...
+          </div>
+        ) : (
+          summaryResult?.summary && (
+            <div className="bg-white border border-blue-100 shadow-md rounded-lg p-4 mb-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                Summary of Changes
+              </h3>
+              <p className="text-gray-700 mb-3">{summaryResult.summary}</p>
+              <span
+                className={`inline-block px-3 py-1 text-sm rounded-full font-medium ${
+                  summaryResult.significance === "critical"
+                    ? "bg-red-100 text-red-700"
+                    : summaryResult.significance === "major"
+                    ? "bg-yellow-100 text-yellow-700"
+                    : "bg-green-100 text-green-700"
+                }`}
+              >
+                Significance: {summaryResult.significance}
+              </span>
+            </div>
+          )
+        )}
         {!!diffResult.length && (
-          <section className="bg-white p-6 rounded-lg shadow-xl/30">
+          <section className="bg-white p-4 rounded-lg border-blue-100 border shadow-md">
             <div className="flex justify-between items-baseline">
-              <h4 className="text-xl font-medium mb-4">Diff Output</h4>
+              <h4 className="text-lg font-semibold mb-4 text-gray-800">
+                Diff Output
+              </h4>
               {isInline ? (
                 <button
                   type="button"
                   className="cursor-pointer bg-gray-200 p-1 rounded-2xl"
-                  onClick={() => setIsInline(false)}
+                  onClick={() => toggleInlineView(false)}
                   title="View split mode"
                 >
                   <svg
@@ -269,7 +348,7 @@ const App = () => {
                 <button
                   type="button"
                   className="cursor-pointer bg-gray-200 p-1 rounded-2xl"
-                  onClick={() => setIsInline(true)}
+                  onClick={() => toggleInlineView(true)}
                   title="View inline mode"
                 >
                   <svg

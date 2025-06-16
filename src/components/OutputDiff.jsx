@@ -28,16 +28,16 @@ const OutputDiff = ({ result }) => {
   }, [result]);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 whitespace-pre-wrap">
-      <div>
-        <h5 className="mb-2">Content 1</h5>
-        <div className="p-4 border border-gray-400 rounded-lg bg-gray-50 min-h-[100px]">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 whitespace-pre-wrap">
+      <div className="rounded-lg border border-slate-300 shadow-sm bg-white">
+        <h5 className="bg-slate-100 text-slate-700 px-4 py-2 rounded-t-lg font-semibold text-sm border-b">Content 1</h5>
+        <div className="p-4 min-h-[120px] max-h-[400px] overflow-auto text-sm leading-relaxed">
           {left}
         </div>
       </div>
-      <div>
-        <h5 className="mb-2">Content 2</h5>
-        <div className="p-4 border border-gray-400 rounded-lg bg-gray-50 min-h-[100px]">
+      <div className="rounded-lg border border-slate-300 shadow-sm bg-white">
+        <h5 className="bg-slate-100 text-slate-700 px-4 py-2 rounded-t-lg font-semibold text-sm border-b">Content 2</h5>
+        <div className="p-4 min-h-[120px] max-h-[400px] overflow-auto text-sm leading-relaxed">
           {right}
         </div>
       </div>
