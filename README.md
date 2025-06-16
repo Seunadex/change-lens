@@ -1,12 +1,104 @@
-# React + Vite
+# ChangeLens
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**AI-powered text comparison with human-friendly summaries and impact analysis**
 
-Currently, two official plugins are available:
+[![Netlify Status](https://api.netlify.com/api/v1/badges/29793971-3b1f-47d6-a12a-612ace7c4fd0/deploy-status)](https://app.netlify.com/projects/changelens/deploys)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+🔗 [Live Demo →](https://changelens.netlify.app/)
 
-## Expanding the ESLint configuration
+ChangeLens is a modern web app that helps you compare two versions of any text, highlight their differences visually, and get an AI-powered summary with a significance rating — so you can tell at a glance whether the change is minor, major, or critical.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+---
+
+## ✨ Features
+
+- 🔍 **Visual Diff View**: Inline or side-by-side diff highlighting
+- 🤖 **AI Summary Generation**: Powered by Gemma (via AIMLAPI)
+- 📊 **Change Significance**: Classifies updates as minor, major, or critical
+- 💾 **Session Management**: Save and revisit text comparisons (via localStorage)
+- 🧼 **Reset & Clean UI**: Responsive, accessible, and easy to use
+
+---
+
+## 🚀 Live Demo
+
+▶️ [https://changelens.netlify.app](https://changelens.netlify.app)
+
+---
+
+## 🛠 Tech Stack
+
+- **Frontend**: React (Vite), Tailwind CSS
+- **AI Integration**: Google Gemma 3B via [AIMLAPI](https://aimlapi.com)
+- **Backend**: Netlify Functions
+- **Storage**: LocalStorage
+
+---
+
+## 📦 Getting Started
+
+### 🔧 Requirements
+
+- Node.js `>=18`
+- [`netlify-cli`](https://docs.netlify.com/cli/get-started/) installed globally
+
+```bash
+npm install -g netlify-cli
+```
+
+---
+
+### 📁 Setup Instructions
+
+1. **Clone the Repo**
+
+   ```bash
+   git clone https://github.com/seunadex/changelens.git
+   cd changelens
+   ```
+
+2. **Add Your `.env` File**
+   Create a `.env` in the root with your AIMLAPI key:
+
+   ```env
+   VITE_API_KEY=your_aimlapi_key_here
+   ```
+
+3. **Install Dependencies**
+
+   ```bash
+   npm install
+   ```
+
+4. **Run the App**
+
+   ```bash
+   netlify dev
+   ```
+
+   This starts both the frontend and the Netlify backend locally.
+
+---
+
+## 🧠 How It Works
+
+1. Input two text versions.
+2. Click **Compare** (with optional AI Summary).
+3. View:
+   - Diff output (highlighted inline or split)
+   - AI summary of what changed
+   - Significance rating (`minor`, `major`, `critical`)
+4. Save or revisit previous comparisons using the session dropdown.
+
+---
+
+## 👤 Author
+
+Made by **Seun Adekunle**
+💼 [LinkedIn →](https://www.linkedin.com/in/seunadex)
+
+---
+
+## 📄 License
+
+[MIT License](LICENSE)

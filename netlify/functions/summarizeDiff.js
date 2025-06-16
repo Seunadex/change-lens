@@ -11,8 +11,6 @@ export async function handler(event) {
     };
   }
 
-  console.log(event.body);
-
   const { contentOne, contentTwo } = JSON.parse(event.body);
 
   const prompt = `
