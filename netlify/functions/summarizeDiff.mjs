@@ -2,7 +2,6 @@ import fetch from "node-fetch";
 import 'dotenv/config'
 
 export async function handler(event) {
-  // eslint-disable-next-line no-undef
   const apiKey = process.env.VITE_API_KEY;
   if (event.httpMethod !== "POST") {
     return {
